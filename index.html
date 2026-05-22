@@ -55,14 +55,14 @@
                 <div id="receiverList" style="display:none; position:absolute; top:100%; left:0; right:0; background:#fff; border:1px solid #ccc; max-height:200px; overflow-y:auto; z-index:1000; border-radius:4px; box-shadow:0 4px 12px rgba(0,0,0,0.2);"></div>
             </div>
         </div>
-        <div class="toolbar-row">
-            <input type="date" id="dateSelect" style="flex: 1;">
-            <button id="btnPrevHr" class="btn-icon">◀</button>
-            <input type="text" id="startTime" placeholder="00:00" maxlength="5" style="width:60px; text-align:center; flex:none; padding:8px;">
-            <span>-</span>
-            <input type="text" id="endTime" placeholder="00:00" maxlength="5" style="width:60px; text-align:center; flex:none; padding:8px;">
-            <button id="btnNextHr" class="btn-icon">▶</button>
-        </div>
+        <div class="toolbar-row" style="padding-right: 0;">
+    <input type="date" id="dateSelect" style="flex: 1; height: 38px; padding: 4px 8px;">
+    <button id="btnPrevHr" class="btn-icon">◀</button>
+    <input type="text" id="startTime" placeholder="00:00" maxlength="5" style="width:60px; text-align:center; flex:none; padding:8px;">
+    <span>-</span>
+    <input type="text" id="endTime" placeholder="00:00" maxlength="5" style="width:60px; text-align:center; flex:none; padding:8px;">
+    <button id="btnNextHr" class="btn-icon">▶</button>
+       </div>
         <div class="toolbar-row" style="margin-bottom: 8px;">
             <button id="refreshBtn" class="btn-refresh">🔄 刷新資料</button>
             <button id="btnResetTime" class="btn-reset">↺ 重置</button>
