@@ -71,7 +71,6 @@
         <div class="summary-bar">
             <span id="totalSongs">總人數: 0</span>
             <span id="totalAmount">總額: 0</span>
-            <span id="receiverTotal" style="color: var(--accent-gold); display:none;">收禮人: 0</span>
         </div>
     </header>
 
@@ -119,7 +118,7 @@
                 const user = users[senderId]; user.name = row.senderName;
                 if (row.type === 'gift') {
                     user.totalReceived += amount;
-                    user.gifts.push({ time: row.time, receiver: rcvName, amount: amount, item: row.item || row.giftName || '' });
+                    user.gifts.push({ time: row.time, receiver: rcvName, amount: amount, item: row.giftName || '', qty: Number(row.quantity) || 1, isRandom: !!row.drawBoxName });
                 }
             });
 
@@ -131,7 +130,7 @@
                 dataList.appendChild(opt);
             });
 
-            let grandTotalAmount = 0, receiverTotalAmount = receiverTotals.get(receiverInput.value.trim()) || 0, displayList = [];
+            let grandTotalAmount = 0, displayList = [];
             Object.values(users).forEach(user => {
                 if (user.totalReceived > 0) { displayList.push(user); grandTotalAmount += user.totalReceived; }
             });
@@ -140,7 +139,7 @@
             displayList.forEach(user => {
                 const card = document.createElement('div'); card.className = `user-card ${user.isMember ? 'member' : ''}`;
                 const giftsHTML = user.gifts.length > 0
-                    ? user.gifts.map(g => `<div class="detail-item"><span>${g.time} ${g.receiver}${g.item ? ' · ' + g.item : ''}</span><span>$${g.amount}</span></div>`).join('')
+                    ? user.gifts.map(g => `<div class="detail-item"><span>${g.isRandom ? '🎲 ' : ''}${g.time} ${g.receiver}${g.item ? ' · ' + g.item : ''}${g.qty > 1 ? ' ×' + g.qty : ''}</span><span>$${g.amount}</span></div>`).join('')
                     : '<div style="color:#aaa;">無禮物記錄</div>';
                 card.innerHTML = `
                     <div class="card-header">
@@ -154,8 +153,6 @@
 
             document.getElementById('totalSongs').innerText = `總人數: ${displayList.length}`;
             document.getElementById('totalAmount').innerText = `總額: ${grandTotalAmount}`;
-            const rcvTotalEl = document.getElementById('receiverTotal');
-            if (fReceiver) { rcvTotalEl.innerText = `收禮人: ${receiverTotalAmount}`; rcvTotalEl.style.display = 'inline'; } else { rcvTotalEl.style.display = 'none'; }
         }
 
         refreshBtn.addEventListener('click', fetchData);
