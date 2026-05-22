@@ -86,6 +86,16 @@
             opacity: 0.8;
         }
 
+        .rcv-opt {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+            color: #333;
+            cursor: pointer;
+        }
+        .rcv-opt:last-child { border-bottom: none; }
+        .rcv-opt:active { background: #f0f0f0; }
+
         .summary-bar {
             display: flex;
             justify-content: space-between;
@@ -185,11 +195,13 @@
 
     <header>
         <div class="toolbar">
-            <select id="roomSelect"><option value="">房間...</option></select>
-            <input type="text" id="receiverInput" list="receiverList" placeholder="收禮者(可選/可填)">
-            <datalist id="receiverList"></datalist>
-            <input type="date" id="dateSelect">
-            <button id="refreshBtn" class="btn-refresh">🔄 刷新資料</button>
+            <select id="roomSelect" style="flex: 0.6;"><option value="">房間</option></select>
+            <div style="position:relative; flex: 1; display:flex; align-items:center;">
+                <input type="text" id="receiverInput" placeholder="收禮者" style="width:100%; padding-right:24px;">
+                <button id="rcvBtn" style="position:absolute; right:2px; background:none; border:none; color:#888; font-size:12px; padding:8px;">▼</button>
+                <div id="receiverList" style="display:none; position:absolute; top:100%; left:0; right:0; background:#fff; border:1px solid #ccc; max-height:200px; overflow-y:auto; z-index:1000; border-radius:4px; box-shadow:0 4px 12px rgba(0,0,0,0.2);"></div>
+            </div>
+            <input type="date" id="dateSelect" style="flex: 0.8;">
         </div>
         <div class="toolbar-time">
             <button id="btnPrevHr" class="btn-icon">◀</button>
@@ -372,7 +384,7 @@
 
                 if (type === 'gift') {
                     user.totalReceived += amount;
-                    if (fReceiver && rcvName === fReceiver) receiverTotalAmount += amount;
+                    if (fReceiver && currentReceiver.includes(fReceiver)) receiverTotalAmount += amount;
                 } else if (type === 'half') {
                     user.halfCount += quantity;
                 } else if (type === 'light') {
@@ -396,8 +408,14 @@
             if (dataList) {
                 dataList.innerHTML = '';
                 Array.from(availableReceivers).sort().forEach(rcv => {
-                    const opt = document.createElement('option');
-                    opt.value = rcv;
+                    const opt = document.createElement('div');
+                    opt.className = 'rcv-opt';
+                    opt.innerText = rcv;
+                    opt.onclick = () => {
+                        receiverInput.value = rcv;
+                        dataList.style.display = 'none';
+                        renderUI();
+                    };
                     dataList.appendChild(opt);
                 });
             }
@@ -480,7 +498,31 @@
         refreshBtn.addEventListener('click', fetchData);
         roomSelect.addEventListener('change', renderUI);
         dateSelect.addEventListener('change', renderUI);
-        receiverInput.addEventListener('input', renderUI);
+        
+        receiverInput.addEventListener('input', () => {
+            renderUI();
+            const val = receiverInput.value.trim().toLowerCase();
+            const rcvList = document.getElementById('receiverList');
+            rcvList.style.display = val ? 'block' : 'none';
+            Array.from(rcvList.children).forEach(opt => {
+                opt.style.display = (val && opt.innerText.toLowerCase().includes(val)) ? 'block' : 'none';
+            });
+        });
+        
+        document.getElementById('rcvBtn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            const rcvList = document.getElementById('receiverList');
+            const isShowing = rcvList.style.display === 'block';
+            rcvList.style.display = isShowing ? 'none' : 'block';
+            if (!isShowing) Array.from(rcvList.children).forEach(opt => opt.style.display = 'block');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (e.target !== receiverInput && e.target !== document.getElementById('rcvBtn')) {
+                document.getElementById('receiverList').style.display = 'none';
+            }
+        });
+
         startTimeInput.addEventListener('change', renderUI);
         endTimeInput.addEventListener('change', renderUI);
 
