@@ -51,11 +51,11 @@
         <div class="toolbar-row">
             <select id="roomSelect" style="flex: 0.6;"><option value="">房間</option></select>
             <div style="flex: 1; position:relative; display:flex; align-items:center;">
-    <input type="text" id="receiverInput" placeholder="收禮者" style="padding-right:48px;">
-    <button id="rcvClearBtn" style="position:absolute; right:26px; background:none; border:none; color:#888; font-size:14px; padding:8px; display:none;">✕</button>
-    <button id="rcvBtn" style="position:absolute; right:2px; background:none; border:none; color:#888; font-size:12px; padding:10px;">▼</button>
-    <div id="receiverList" style="display:none; position:absolute; top:100%; left:0; right:0; background:#fff; border:1px solid #ccc; max-height:200px; overflow-y:auto; z-index:1000; border-radius:4px; box-shadow:0 4px 12px rgba(0,0,0,0.2);"></div>
-</div>
+                <input type="text" id="receiverInput" placeholder="收禮者" style="padding-right:48px;">
+                <button id="rcvClearBtn" style="position:absolute; right:26px; background:none; border:none; color:#888; font-size:14px; padding:8px; display:none;">✕</button>
+                <button id="rcvBtn" style="position:absolute; right:2px; background:none; border:none; color:#888; font-size:12px; padding:10px;">▼</button>
+                <div id="receiverList" style="display:none; position:absolute; top:100%; left:0; right:0; background:#fff; border:1px solid #ccc; max-height:200px; overflow-y:auto; z-index:1000; border-radius:4px; box-shadow:0 4px 12px rgba(0,0,0,0.2);"></div>
+            </div>
         </div>
         <div class="toolbar-row">
             <input type="date" id="dateSelect" style="flex: 1;">
@@ -127,7 +127,7 @@
             dataList.innerHTML = '';
             Array.from(receiverTotals.entries()).sort((a,b)=>b[1]-a[1]).forEach(([name, total]) => {
                 const opt = document.createElement('div'); opt.className = 'rcv-opt'; opt.innerHTML = `<span>${name}</span><span>$${total}</span>`;
-                opt.onclick = () => { receiverInput.value = name; dataList.style.display = 'none'; renderUI(); };
+                opt.onclick = () => { receiverInput.value = name; document.getElementById('rcvClearBtn').style.display = 'block'; dataList.style.display = 'none'; renderUI(); };
                 dataList.appendChild(opt);
             });
 
@@ -160,17 +160,17 @@
         roomSelect.addEventListener('change', renderUI);
         dateSelect.addEventListener('change', renderUI);
         receiverInput.addEventListener('input', () => {
-    document.getElementById('rcvClearBtn').style.display = receiverInput.value ? 'block' : 'none';
-    renderUI();
-    document.getElementById('receiverList').style.display = 'block';
-});
-document.getElementById('rcvClearBtn').addEventListener('click', (e) => {
-    e.stopPropagation();
-    receiverInput.value = '';
-    document.getElementById('rcvClearBtn').style.display = 'none';
-    document.getElementById('receiverList').style.display = 'none';
-    renderUI();
-})
+            document.getElementById('rcvClearBtn').style.display = receiverInput.value ? 'block' : 'none';
+            renderUI();
+            document.getElementById('receiverList').style.display = 'block';
+        });
+        document.getElementById('rcvClearBtn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            receiverInput.value = '';
+            document.getElementById('rcvClearBtn').style.display = 'none';
+            document.getElementById('receiverList').style.display = 'none';
+            renderUI();
+        });
         document.getElementById('rcvBtn').addEventListener('click', (e) => { e.stopPropagation(); const d = document.getElementById('receiverList'); d.style.display = d.style.display === 'block' ? 'none' : 'block'; });
         document.addEventListener('click', (e) => { if (e.target !== receiverInput && e.target !== document.getElementById('rcvBtn')) document.getElementById('receiverList').style.display = 'none'; });
         startTimeInput.addEventListener('change', renderUI); endTimeInput.addEventListener('change', renderUI);
