@@ -37,21 +37,35 @@
 
         .toolbar {
             display: flex;
+            flex-wrap: wrap;
             gap: 8px;
             margin-bottom: 8px;
         }
+        .toolbar > * {
+            flex: 1 1 calc(50% - 4px);
+            box-sizing: border-box;
+        }
+        .toolbar-time {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 4px;
+            margin-bottom: 12px;
+            width: 100%;
+        }
         .btn-icon {
-            background: #a5a5a5; color: white; border: none; border-radius: 4px; padding: 4px 8px; font-size: 12px; cursor: pointer;
+            background: #a5a5a5; color: white; border: none; border-radius: 4px; padding: 8px 12px; font-size: 14px; cursor: pointer; flex-shrink: 0;
         }
         select, input[type="date"], input[type="text"] {
-            flex: 1;
-            padding: 8px;
+            width: 100%;
+            padding: 10px;
             border: 1px solid transparent;
             border-radius: 6px;
             background: rgba(255,255,255,0.9);
             color: var(--text-main);
-            font-size: 14px;
+            font-size: 16px;
             outline: none;
+            box-sizing: border-box;
         }
 
         .btn-refresh {
@@ -171,18 +185,19 @@
 
     <header>
         <div class="toolbar">
-            <select id="roomSelect" style="flex: 0.8;"><option value="">房間...</option></select>
-            <input type="text" id="receiverInput" placeholder="收禮者" style="flex: 1;">
-            <input type="date" id="dateSelect" style="flex: 1;">
+            <select id="roomSelect"><option value="">房間...</option></select>
+            <input type="text" id="receiverInput" list="receiverList" placeholder="收禮者(可選/可填)">
+            <datalist id="receiverList"></datalist>
+            <input type="date" id="dateSelect">
+            <button id="refreshBtn" class="btn-refresh">🔄 刷新資料</button>
         </div>
-        <div class="toolbar" style="align-items: center; gap: 4px; margin-bottom: 12px;">
+        <div class="toolbar-time">
             <button id="btnPrevHr" class="btn-icon">◀</button>
-            <input type="text" id="startTime" placeholder="00:00" maxlength="5" style="width: 45px; text-align: center; flex: none; padding: 4px;">
+            <input type="text" id="startTime" placeholder="00:00" maxlength="5" style="width: 60px; text-align: center; flex: none; padding: 8px;">
             <span>-</span>
-            <input type="text" id="endTime" placeholder="00:00" maxlength="5" style="width: 45px; text-align: center; flex: none; padding: 4px;">
+            <input type="text" id="endTime" placeholder="00:00" maxlength="5" style="width: 60px; text-align: center; flex: none; padding: 8px;">
             <button id="btnNextHr" class="btn-icon">▶</button>
-            <button id="btnResetTime" class="btn-icon" style="background:#8c8c8c;">↺</button>
-            <button id="refreshBtn" class="btn-refresh" style="margin-left: auto;">🔄</button>
+            <button id="btnResetTime" class="btn-icon" style="background:#8c8c8c; margin-left: auto;">↺</button>
         </div>
         <div class="summary-bar">
             <span id="totalSongs">總歌單: 0</span>
@@ -320,6 +335,7 @@
 
             const users = {};
             let receiverTotalAmount = 0;
+            const availableReceivers = new Set();
 
             // 1. 建立當日會員身份
             rawMemberData.forEach(row => {
@@ -334,16 +350,17 @@
             // 2. 統計日誌資料
             rawLogData.forEach(row => {
                 if (row.roomId !== fRoom || row.date !== fDate || row.type === 'member') return;
-                if (!isTimeInRange(timeToMins(row.time), fStartMin, fEndMin)) return;
+                        if (!isTimeInRange(timeToMins(row.time), fStartMin, fEndMin)) return;
                 
                 const currentReceiver = (row.receiver || '').toLowerCase();
+                const rcvName = row.receiver;
+                
+                if (row.type === 'gift' && rcvName && rcvName !== '未知' && rcvName !== '系統') availableReceivers.add(rcvName);
+
                 if (fReceiver && currentReceiver !== '系統' && !currentReceiver.includes(fReceiver)) return;
 
                 const senderId = row.senderUserId || row.senderName;
                 if (!senderId) return;
-
-                const rcvName = row.receiver;
-                if (fReceiver && rcvName !== '系統' && rcvName !== '未知' && rcvName !== fReceiver) return;
 
                 if (!users[senderId]) users[senderId] = { id: senderId, name: row.senderName, isMember: false, totalReceived: 0, halfCount: 0, lightCount: 0, transferIn: 0, transferOut: 0, eventCost: 0, eventSongs: 0 };
                 const user = users[senderId];
@@ -374,6 +391,16 @@
                     user.eventSongs += quantity;
                 }
             });
+
+            const dataList = document.getElementById('receiverList');
+            if (dataList) {
+                dataList.innerHTML = '';
+                Array.from(availableReceivers).sort().forEach(rcv => {
+                    const opt = document.createElement('option');
+                    opt.value = rcv;
+                    dataList.appendChild(opt);
+                });
+            }
 
             // 3. 計算最終數值並排序
             let grandTotalSongs = 0;
