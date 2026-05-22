@@ -168,19 +168,25 @@
 </head>
 <body>
 
-    <header>
-        <div class="toolbar">
-            <select id="roomSelect">
-                <option value="">選擇房間...</option>
-            </select>
-            <input type="date" id="dateSelect">
-            <button id="refreshBtn" class="btn-refresh">🔄 刷新</button>
+        <header>
+        <div class="toolbar" style="flex-wrap: wrap;">
+            <select id="roomSelect" style="flex: 1; min-width: 100px;"><option value="">選擇房間...</option></select>
+            <input type="date" id="dateSelect" style="flex: 1; min-width: 110px;">
+            <button id="refreshBtn" class="btn-refresh" style="padding: 8px 12px;">🔄 刷新</button>
+        </div>
+        <div class="toolbar" style="flex-wrap: wrap;">
+            <select id="receiverSelect" style="flex: 1; min-width: 100px;"><option value="">全部收禮人</option></select>
+            <input type="time" id="timeStart" style="width: 75px; flex: none;">
+            <span style="color: white; align-self: center;">-</span>
+            <input type="time" id="timeEnd" style="width: 75px; flex: none;">
         </div>
         <div class="summary-bar">
             <span id="totalSongs">總歌單: 0</span>
             <span id="totalAmount">總額: 0</span>
+            <span id="receiverTotal" style="color: var(--accent-gold); display:none;">收禮人: 0</span>
         </div>
     </header>
+
 
     <div id="loading">讀取雲端資料中...</div>
     <div class="container" id="userList"></div>
@@ -199,6 +205,27 @@
         const refreshBtn = document.getElementById('refreshBtn');
         const userList = document.getElementById('userList');
         const loading = document.getElementById('loading');
+        
+        const receiverSelect = document.getElementById('receiverSelect');
+        const timeStart = document.getElementById('timeStart');
+        const timeEnd = document.getElementById('timeEnd');
+
+        function timeToMins(tStr) {
+            if (!tStr) return null;
+            const parts = tStr.split(':');
+            return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+        }
+
+        function isTimeInRange(gTimeMin, fStartMin, fEndMin) {
+            if (gTimeMin === null) return false;
+            if (fStartMin !== null && fEndMin !== null && fStartMin > fEndMin) {
+                return gTimeMin >= fStartMin || gTimeMin <= fEndMin;
+            } else {
+                if (fStartMin !== null && gTimeMin < fStartMin) return false;
+                if (fEndMin !== null && gTimeMin > fEndMin) return false;
+                return true;
+            }
+        }
 
         // 初始化日期為今日
         const today = new Date();
@@ -277,15 +304,21 @@
             userList.innerHTML = '';
             const fDate = dateSelect.value;
             const fRoom = roomSelect.value;
+            const fReceiver = receiverSelect.value;
+            const fStartMin = timeToMins(timeStart.value);
+            const fEndMin = timeToMins(timeEnd.value);
 
             if (!fDate || !fRoom) {
                 userList.innerHTML = '<div style="text-align:center; color:#8c8c8c; padding:20px;">請選擇房間與日期</div>';
                 document.getElementById('totalSongs').innerText = `總歌單: 0`;
                 document.getElementById('totalAmount').innerText = `總額: 0`;
+                document.getElementById('receiverTotal').style.display = 'none';
                 return;
             }
 
             const users = {};
+            const availableReceivers = new Set();
+            let receiverTotalAmount = 0;
 
             // 1. 建立當日會員身份
             rawMemberData.forEach(row => {
@@ -300,13 +333,20 @@
             // 2. 統計日誌資料
             rawLogData.forEach(row => {
                 if (row.roomId !== fRoom || row.date !== fDate || row.type === 'member') return;
+                
+                const timeMin = timeToMins(row.time);
+                if (!isTimeInRange(timeMin, fStartMin, fEndMin)) return;
+
                 const senderId = row.senderUserId || row.senderName;
                 if (!senderId) return;
 
+                const rcvName = row.receiver;
+                if (row.type === 'gift' && rcvName && rcvName !== '未知') availableReceivers.add(rcvName);
+
+                if (fReceiver && rcvName !== '系統' && rcvName !== '未知' && rcvName !== fReceiver) return;
+
                 if (!users[senderId]) users[senderId] = { id: senderId, name: row.senderName, isMember: false, totalReceived: 0, halfCount: 0, lightCount: 0, transferIn: 0, transferOut: 0, eventCost: 0, eventSongs: 0 };
                 const user = users[senderId];
-                
-                // 確保最新名字
                 user.name = row.senderName;
 
                 const amount = Number(row.amount) || 0;
@@ -315,13 +355,13 @@
 
                 if (type === 'gift') {
                     user.totalReceived += amount;
+                    if (fReceiver && rcvName === fReceiver) receiverTotalAmount += amount;
                 } else if (type === 'half') {
                     user.halfCount += quantity;
                 } else if (type === 'light') {
                     user.lightCount += quantity;
                 } else if (type === 'transfer') {
                     user.transferOut += amount;
-                    // 處理轉入
                     let realToId = "usr_" + row.giftName;
                     if (row.messageId && row.messageId.startsWith('transfer_')) {
                         const parts = row.messageId.split('_');
@@ -335,6 +375,17 @@
                 }
             });
 
+            // 更新收禮人下拉選單 (保持當前選擇)
+            const currentRcv = receiverSelect.value;
+            receiverSelect.innerHTML = '<option value="">全部收禮人</option>';
+            Array.from(availableReceivers).sort().forEach(rcv => {
+                const opt = document.createElement('option');
+                opt.value = rcv;
+                opt.innerText = rcv;
+                receiverSelect.appendChild(opt);
+            });
+            if (availableReceivers.has(currentRcv)) receiverSelect.value = currentRcv;
+
             // 3. 計算最終數值並排序
             let grandTotalSongs = 0;
             let grandTotalAmount = 0;
@@ -344,11 +395,10 @@
                 const deductions = (user.halfCount * PRICES.half) + (user.lightCount * PRICES.light) + user.eventCost;
                 const effectiveAmount = user.totalReceived + user.transferIn - user.transferOut - deductions;
                 const price = user.isMember ? PRICES.member : PRICES.normal;
-                
+                
                 user.songCount = Math.max(0, Math.floor(effectiveAmount / price) + user.halfCount + user.eventSongs);
                 user.balance = Math.max(0, effectiveAmount % price);
 
-                // 只顯示有活動、有餘額或有總額的玩家
                 if (user.totalReceived > 0 || user.balance > 0 || user.songCount > 0 || user.halfCount > 0 || user.lightCount > 0 || user.transferIn > 0 || user.transferOut > 0) {
                     displayList.push(user);
                     grandTotalAmount += user.totalReceived;
@@ -362,9 +412,9 @@
             displayList.forEach(user => {
                 const card = document.createElement('div');
                 card.className = `user-card ${user.isMember ? 'member' : ''}`;
-                
+                
                 let deductHtml = '';
-                if (user.halfCount > 0 || user.lightCount > 0 || user.eventCost > 0) {
+                if (user.halfCount > 0 || user.lightCount > 0 || user.eventCost > 0 || user.transferOut > 0 || user.transferIn > 0) {
                     deductHtml = `<div class="deductions">`;
                     if (user.halfCount > 0) deductHtml += `<span>半: ${user.halfCount}</span>`;
                     if (user.lightCount > 0) deductHtml += `<span>光: ${user.lightCount}</span>`;
@@ -400,12 +450,23 @@
 
             document.getElementById('totalSongs').innerText = `總歌單: ${grandTotalSongs}`;
             document.getElementById('totalAmount').innerText = `總額: ${grandTotalAmount}`;
+            
+            const rcvTotalEl = document.getElementById('receiverTotal');
+            if (fReceiver) {
+                rcvTotalEl.innerText = `收禮人: ${receiverTotalAmount}`;
+                rcvTotalEl.style.display = 'inline';
+            } else {
+                rcvTotalEl.style.display = 'none';
+            }
         }
 
         // 綁定事件
         refreshBtn.addEventListener('click', fetchData);
         roomSelect.addEventListener('change', renderUI);
         dateSelect.addEventListener('change', renderUI);
+        receiverSelect.addEventListener('change', renderUI);
+        timeStart.addEventListener('input', renderUI);
+        timeEnd.addEventListener('input', renderUI);
 
         // 初次載入自動抓取
         fetchData();
