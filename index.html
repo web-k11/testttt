@@ -98,7 +98,7 @@
             try { const [resLogs, resMembers] = await Promise.all([fetch(CSV_URL + '&t=' + Date.now()), fetch(CSV_URL_MEMBER + '&t=' + Date.now())]); rawLogData = parseCSV(await resLogs.text()); rawMemberData = parseCSV(await resMembers.text()); availableRooms.clear(); rawLogData.forEach(row => { if (row.roomId) availableRooms.add(row.roomId); }); updateRoomDropdown(); renderUI(); } catch (err) { alert('下載失敗'); } finally { loading.style.display = 'none'; refreshBtn.innerText = '🔄 刷新資料'; refreshBtn.disabled = false; }
         }
 
-        function updateRoomDropdown() { const currentVal = roomSelect.value; roomSelect.innerHTML = '<option value="">房間</option>'; Array.from(availableRooms).sort().forEach(roomId => { const opt = document.createElement('option'); opt.value = roomId; opt.innerText = `房間: ${roomId.slice(-4)}`; roomSelect.appendChild(opt); }); if (availableRooms.has(currentVal)) roomSelect.value = currentVal; else if (availableRooms.size > 0) roomSelect.selectedIndex = 1; }
+        function updateRoomDropdown() { const currentVal = roomSelect.value; roomSelect.innerHTML = '<option value="">房間</option>'; Array.from(availableRooms).sort().forEach(roomId => { const opt = document.createElement('option'); opt.value = roomId; opt.innerText = ` ${roomId.slice(-4)}`; roomSelect.appendChild(opt); }); if (availableRooms.has(currentVal)) roomSelect.value = currentVal; else if (availableRooms.size > 0) roomSelect.selectedIndex = 1; }
 
         function renderUI() {
             userList.innerHTML = '';
