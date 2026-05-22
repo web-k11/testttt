@@ -39,10 +39,13 @@
         .toolbar {
             display: flex;
             gap: 8px;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
         }
-
-        select, input[type="date"] {
+        .btn-icon {
+            background: #a5a5a5; color: white; border: none; border-radius: 4px; padding: 4px 8px; font-size: 12px; cursor: pointer;
+        }
+        select, input[type="date"], input[type="text"] {
+            
             flex: 1;
             padding: 8px;
             border: 1px solid transparent;
@@ -169,16 +172,19 @@
 <body>
 
         <header>
-        <div class="toolbar" style="flex-wrap: wrap;">
-            <select id="roomSelect" style="flex: 1; min-width: 100px;"><option value="">選擇房間...</option></select>
-            <input type="date" id="dateSelect" style="flex: 1; min-width: 110px;">
-            <button id="refreshBtn" class="btn-refresh" style="padding: 8px 12px;">🔄 刷新</button>
+        <div class="toolbar">
+            <select id="roomSelect" style="flex: 0.8;"><option value="">房間...</option></select>
+            <input type="text" id="receiverInput" placeholder="收禮者" style="flex: 1;">
+            <input type="date" id="dateSelect" style="flex: 1;">
         </div>
-        <div class="toolbar" style="flex-wrap: wrap;">
-            <select id="receiverSelect" style="flex: 1; min-width: 100px;"><option value="">全部收禮人</option></select>
-            <input type="time" id="timeStart" style="width: 75px; flex: none;">
-            <span style="color: white; align-self: center;">-</span>
-            <input type="time" id="timeEnd" style="width: 75px; flex: none;">
+        <div class="toolbar" style="align-items: center; gap: 4px; margin-bottom: 12px;">
+            <button id="btnPrevHr" class="btn-icon">◀</button>
+            <input type="text" id="startTime" placeholder="00:00" maxlength="5" style="width: 45px; text-align: center; flex: none; padding: 4px;">
+            <span>-</span>
+            <input type="text" id="endTime" placeholder="00:00" maxlength="5" style="width: 45px; text-align: center; flex: none; padding: 4px;">
+            <button id="btnNextHr" class="btn-icon">▶</button>
+            <button id="btnResetTime" class="btn-icon" style="background:#8c8c8c;">↺</button>
+            <button id="refreshBtn" class="btn-refresh" style="margin-left: auto;">🔄</button>
         </div>
         <div class="summary-bar">
             <span id="totalSongs">總歌單: 0</span>
@@ -205,10 +211,9 @@
         const refreshBtn = document.getElementById('refreshBtn');
         const userList = document.getElementById('userList');
         const loading = document.getElementById('loading');
-        
-        const receiverSelect = document.getElementById('receiverSelect');
-        const timeStart = document.getElementById('timeStart');
-        const timeEnd = document.getElementById('timeEnd');
+        const receiverInput = document.getElementById('receiverInput');
+        const startTimeInput = document.getElementById('startTime');
+        const endTimeInput = document.getElementById('endTime');
 
         function timeToMins(tStr) {
             if (!tStr) return null;
@@ -218,18 +223,20 @@
 
         function isTimeInRange(gTimeMin, fStartMin, fEndMin) {
             if (gTimeMin === null) return false;
-            if (fStartMin !== null && fEndMin !== null && fStartMin > fEndMin) {
-                return gTimeMin >= fStartMin || gTimeMin <= fEndMin;
-            } else {
-                if (fStartMin !== null && gTimeMin < fStartMin) return false;
-                if (fEndMin !== null && gTimeMin > fEndMin) return false;
-                return true;
-            }
+            if (fStartMin !== null && fEndMin !== null && fStartMin > fEndMin) return gTimeMin >= fStartMin || gTimeMin <= fEndMin;
+            if (fStartMin !== null && gTimeMin < fStartMin) return false;
+            if (fEndMin !== null && gTimeMin > fEndMin) return false;
+            return true;
         }
 
-        // 初始化日期為今日
-        const today = new Date();
-        dateSelect.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        function initTime() {
+            const today = new Date();
+            dateSelect.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            const ch = today.getHours();
+            startTimeInput.value = `${String(ch).padStart(2, '0')}:00`;
+            endTimeInput.value = `${String(ch).padStart(2, '0')}:59`;
+        }
+        initTime();
 
         // CSV 解析邏輯
         function parseCSV(text) {
@@ -304,9 +311,9 @@
             userList.innerHTML = '';
             const fDate = dateSelect.value;
             const fRoom = roomSelect.value;
-            const fReceiver = receiverSelect.value;
-            const fStartMin = timeToMins(timeStart.value);
-            const fEndMin = timeToMins(timeEnd.value);
+            const fReceiver = receiverInput.value.trim().toLowerCase();
+            const fStartMin = timeToMins(startTimeInput.value);
+            const fEndMin = timeToMins(endTimeInput.value);
 
             if (!fDate || !fRoom) {
                 userList.innerHTML = '<div style="text-align:center; color:#8c8c8c; padding:20px;">請選擇房間與日期</div>';
@@ -333,9 +340,10 @@
             // 2. 統計日誌資料
             rawLogData.forEach(row => {
                 if (row.roomId !== fRoom || row.date !== fDate || row.type === 'member') return;
+                if (!isTimeInRange(timeToMins(row.time), fStartMin, fEndMin)) return;
                 
-                const timeMin = timeToMins(row.time);
-                if (!isTimeInRange(timeMin, fStartMin, fEndMin)) return;
+                const currentReceiver = (row.receiver || '').toLowerCase();
+                if (fReceiver && currentReceiver !== '系統' && !currentReceiver.includes(fReceiver)) return;
 
                 const senderId = row.senderUserId || row.senderName;
                 if (!senderId) return;
@@ -464,9 +472,35 @@
         refreshBtn.addEventListener('click', fetchData);
         roomSelect.addEventListener('change', renderUI);
         dateSelect.addEventListener('change', renderUI);
-        receiverSelect.addEventListener('change', renderUI);
-        timeStart.addEventListener('input', renderUI);
-        timeEnd.addEventListener('input', renderUI);
+        receiverInput.addEventListener('input', renderUI);
+        startTimeInput.addEventListener('change', renderUI);
+        endTimeInput.addEventListener('change', renderUI);
+
+        function shiftTime(deltaHours) {
+            if (!startTimeInput.value || !dateSelect.value) return;
+            let [sHour, sMin] = startTimeInput.value.split(':').map(Number);
+            let [eHour, eMin] = endTimeInput.value ? endTimeInput.value.split(':').map(Number) : [sHour, sMin];
+            let dateShift = 0;
+            let newSHour = sHour + deltaHours;
+            if (newSHour < 0) { newSHour += 24; dateShift = -1; }
+            else if (newSHour >= 24) { newSHour -= 24; dateShift = 1; }
+            let newEHour = eHour + deltaHours;
+            if (newEHour < 0) newEHour += 24;
+            else if (newEHour >= 24) newEHour -= 24;
+            
+            if (dateShift !== 0) {
+                let d = new Date(dateSelect.value);
+                d.setDate(d.getDate() + dateShift);
+                dateSelect.value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+            }
+            startTimeInput.value = `${String(newSHour).padStart(2, '0')}:${String(sMin || 0).padStart(2, '0')}`;
+            endTimeInput.value = `${String(newEHour).padStart(2, '0')}:${String(eMin || 0).padStart(2, '0')}`;
+            renderUI();
+        }
+
+        document.getElementById('btnPrevHr').addEventListener('click', () => shiftTime(-1));
+        document.getElementById('btnNextHr').addEventListener('click', () => shiftTime(1));
+        document.getElementById('btnResetTime').addEventListener('click', () => { initTime(); renderUI(); });
 
         // 初次載入自動抓取
         fetchData();
