@@ -157,7 +157,7 @@
             displayList.forEach(user => {
                 const card = document.createElement('div'); card.className = 'user-card';
                 const giftsHTML = user.gifts.length > 0
-                    ? user.gifts.map(g => `<div class="detail-item"><span>${g.isRandom ? '🎲 ' : ''}${g.time} ${g.receiver}${g.isRandom && g.drawPrice ? ' · ($' + g.drawPrice + ')' : ''}${g.item ? g.item : ''}${g.qty > 1 ? ' ×' + g.qty : ''}</span><span>$${g.amount}</span></div>`).join('')
+                    ? user.gifts.map(g => `<div class="detail-item"><span>${g.isRandom ? '🎲 ' : ''}${g.time} ${g.receiver}${g.isRandom && g.drawPrice ? ' · ($' + g.drawPrice + ')' : ''}${g.item ? ' · ' + g.item : ''}${g.qty > 1 ? ' ×' + g.qty : ''}</span><span>$${g.amount}</span></div>`).join('')
                     : '<div style="color:#aaa;">無禮物記錄</div>';
                 card.innerHTML = `
                     <div class="card-header">
