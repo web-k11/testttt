@@ -6,7 +6,6 @@
     <title>PlayOne 雲端帳務看板</title>
     <style>
         :root {
-            /* 莫蘭迪色系配置 */
             --bg-color: #f0eee9;
             --header-bg: #8ba09e;
             --card-bg: #ffffff;
@@ -45,7 +44,6 @@
             background: #a5a5a5; color: white; border: none; border-radius: 4px; padding: 4px 8px; font-size: 12px; cursor: pointer;
         }
         select, input[type="date"], input[type="text"] {
-            
             flex: 1;
             padding: 8px;
             border: 1px solid transparent;
@@ -150,7 +148,7 @@
 
         .val-balance { color: var(--accent-gold); }
         .val-songs { color: var(--accent-green); }
-        
+       
         .deductions {
             margin-top: 8px;
             padding-top: 8px;
@@ -171,7 +169,7 @@
 </head>
 <body>
 
-        <header>
+    <header>
         <div class="toolbar">
             <select id="roomSelect" style="flex: 0.8;"><option value="">房間...</option></select>
             <input type="text" id="receiverInput" placeholder="收禮者" style="flex: 1;">
@@ -263,7 +261,6 @@
             refreshBtn.disabled = true;
 
             try {
-                // 加上時間戳強制繞過瀏覽器快取，抓取 Google 最新的 CDN 節點資料
                 const [resLogs, resMembers] = await Promise.all([
                     fetch(CSV_URL + '&t=' + Date.now()),
                     fetch(CSV_URL_MEMBER + '&t=' + Date.now())
@@ -272,10 +269,9 @@
                 rawLogData = parseCSV(await resLogs.text());
                 rawMemberData = parseCSV(await resMembers.text());
 
-                // 提取所有不重複的 RoomId
                 availableRooms.clear();
                 rawLogData.forEach(row => { if (row.roomId) availableRooms.add(row.roomId); });
-                
+               
                 updateRoomDropdown();
                 renderUI();
 
@@ -301,7 +297,6 @@
             if (availableRooms.has(currentVal)) {
                 roomSelect.value = currentVal;
             } else if (availableRooms.size > 0) {
-                // 如果沒選，預設選第一個
                 roomSelect.selectedIndex = 1;
             }
         }
@@ -324,7 +319,6 @@
             }
 
             const users = {};
-            const availableReceivers = new Set();
             let receiverTotalAmount = 0;
 
             // 1. 建立當日會員身份
@@ -349,8 +343,6 @@
                 if (!senderId) return;
 
                 const rcvName = row.receiver;
-                if (row.type === 'gift' && rcvName && rcvName !== '未知') availableReceivers.add(rcvName);
-
                 if (fReceiver && rcvName !== '系統' && rcvName !== '未知' && rcvName !== fReceiver) return;
 
                 if (!users[senderId]) users[senderId] = { id: senderId, name: row.senderName, isMember: false, totalReceived: 0, halfCount: 0, lightCount: 0, transferIn: 0, transferOut: 0, eventCost: 0, eventSongs: 0 };
@@ -382,17 +374,6 @@
                     user.eventSongs += quantity;
                 }
             });
-
-            // 更新收禮人下拉選單 (保持當前選擇)
-            const currentRcv = receiverSelect.value;
-            receiverSelect.innerHTML = '<option value="">全部收禮人</option>';
-            Array.from(availableReceivers).sort().forEach(rcv => {
-                const opt = document.createElement('option');
-                opt.value = rcv;
-                opt.innerText = rcv;
-                receiverSelect.appendChild(opt);
-            });
-            if (availableReceivers.has(currentRcv)) receiverSelect.value = currentRcv;
 
             // 3. 計算最終數值並排序
             let grandTotalSongs = 0;
