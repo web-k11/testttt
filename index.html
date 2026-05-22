@@ -80,6 +80,7 @@
         const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQd7Usef7dGUcWE2aWEzxhbQsghuYQ1gCc4dwPs0GkrPES-uKyo9TCBhp-9hGcnY6_ZuIAMcArTRoQy/pub?output=csv';
 
         let rawLogData = [], availableRooms = new Set();
+        let selectedRcvId = null; // 新增變數以記錄收禮者 ID
         const roomSelect = document.getElementById('roomSelect'), dateSelect = document.getElementById('dateSelect'), refreshBtn = document.getElementById('refreshBtn'), userList = document.getElementById('userList'), loading = document.getElementById('loading'), receiverInput = document.getElementById('receiverInput'), startTimeInput = document.getElementById('startTime'), endTimeInput = document.getElementById('endTime');
 
         function timeToMins(tStr) { const parts = tStr.split(':'); return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10); }
@@ -114,17 +115,22 @@
             rawLogData.forEach(row => {
                 if (row.roomId !== fRoom || row.date !== fDate || row.type === 'member' || !isTimeInRange(timeToMins(row.time), fStartMin, fEndMin)) return;
                 const rcvName = row.receiver;
+                const rcvId = row.receiverId || rcvName;
                 const amount = Number(row.amount) || 0;
 
                 if (row.type === 'gift' && rcvName && rcvName !== '未知' && rcvName !== '系統') {
-                    const rcvId = row.receiverId || rcvName;
                     const existing = receiverTotals.get(rcvId) || { name: rcvName, total: 0 };
                     existing.name = rcvName;
                     existing.total += amount;
                     receiverTotals.set(rcvId, existing);
                 }
 
-                if (fReceiver && rcvName.toLowerCase() !== '系統' && !rcvName.toLowerCase().includes(fReceiver)) return;
+                if (selectedRcvId) {
+                    if (rcvId !== selectedRcvId) return;
+                } else if (fReceiver) {
+                    if (rcvName.toLowerCase() !== '系統' && !rcvName.toLowerCase().includes(fReceiver)) return;
+                }
+                
                 const senderId = row.senderUserId || row.senderName; if (!senderId) return;
                 if (!users[senderId]) users[senderId] = { id: senderId, name: row.senderName, totalReceived: 0, gifts: [] };
                 const user = users[senderId]; user.name = row.senderName;
@@ -138,7 +144,7 @@
             dataList.innerHTML = '';
             Array.from(receiverTotals.entries()).sort((a,b) => b[1].total - a[1].total).forEach(([id, {name, total}]) => {
                 const opt = document.createElement('div'); opt.className = 'rcv-opt'; opt.innerHTML = `<span>${name}</span><span>$${total}</span>`;
-                opt.onclick = () => { receiverInput.value = name; document.getElementById('rcvClearBtn').style.display = 'block'; dataList.style.display = 'none'; renderUI(); };
+                opt.onclick = () => { selectedRcvId = id; receiverInput.value = name; document.getElementById('rcvClearBtn').style.display = 'block'; dataList.style.display = 'none'; renderUI(); };
                 dataList.appendChild(opt);
             });
 
@@ -171,12 +177,14 @@
         roomSelect.addEventListener('change', renderUI);
         dateSelect.addEventListener('change', renderUI);
         receiverInput.addEventListener('input', () => {
+            selectedRcvId = null;
             document.getElementById('rcvClearBtn').style.display = receiverInput.value ? 'block' : 'none';
             renderUI();
             document.getElementById('receiverList').style.display = 'block';
         });
         document.getElementById('rcvClearBtn').addEventListener('click', (e) => {
             e.stopPropagation();
+            selectedRcvId = null;
             receiverInput.value = '';
             document.getElementById('rcvClearBtn').style.display = 'none';
             document.getElementById('receiverList').style.display = 'none';
