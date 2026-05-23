@@ -21,7 +21,7 @@
         header { background-color: var(--header-bg); color: white; padding: 12px 16px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
 
         .toolbar-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
-        .btn-icon { background: #a5a5a5; color: white; border: none; border-radius: 4px; padding: 8px 12px; font-size: 14px; cursor: pointer; flex-shrink: 0; }
+        .btn-icon { background: #a5a5a5; color: white; border: none; border-radius: 4px; padding: 8px 12px; font-size: 14px; cursor: pointer; flex-shrink: 0; touch-action: manipulation; }
         select, input[type="date"], input[type="text"] { width: 100%; padding: 10px; border: 1px solid transparent; border-radius: 6px; background: rgba(255,255,255,0.9); color: var(--text-main); font-size: 16px; outline: none; box-sizing: border-box; }
         .btn-refresh { background-color: var(--accent-gold); color: white; border: none; border-radius: 6px; padding: 10px 16px; font-weight: bold; cursor: pointer; flex: 1; }
         .btn-reset { background-color: #8c8c8c; color: white; border: none; border-radius: 6px; padding: 10px 16px; font-weight: bold; cursor: pointer; }
@@ -205,8 +205,16 @@
             let [sHour, sMin] = startTimeInput.value.split(':').map(Number);
             let [eHour, eMin] = endTimeInput.value ? endTimeInput.value.split(':').map(Number) : [sHour, sMin];
             let newSHour = sHour + deltaHours, newEHour = eHour + deltaHours;
-            startTimeInput.value = `${String((newSHour + 24) % 24).padStart(2, '0')}:${String(sMin).padStart(2, '0')}`;
-            endTimeInput.value = `${String((newEHour + 24) % 24).padStart(2, '0')}:${String(eMin).padStart(2, '0')}`;
+            
+            let dayShift = Math.floor(newSHour / 24);
+            if (dayShift !== 0 && dateSelect.value) {
+                let d = new Date(dateSelect.value);
+                d.setDate(d.getDate() + dayShift);
+                dateSelect.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            }
+
+            startTimeInput.value = `${String(((newSHour % 24) + 24) % 24).padStart(2, '0')}:${String(sMin).padStart(2, '0')}`;
+            endTimeInput.value = `${String(((newEHour % 24) + 24) % 24).padStart(2, '0')}:${String(eMin).padStart(2, '0')}`;
             renderUI();
         }
         fetchData();
